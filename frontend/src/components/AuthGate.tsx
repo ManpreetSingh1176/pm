@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import AIChatSidebar from "@/components/AIChatSidebar";
 
 const STORAGE_KEY = "kanban.loggedIn";
 const VALID_USERNAME = "user";
@@ -23,9 +24,21 @@ export function AuthGate() {
   const handleSignIn = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-      window.localStorage.setItem(STORAGE_KEY, "true");
-      setSignedIn(true);
-      setError("");
+      // call backend login to set cookie for API calls
+      fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("login failed");
+          window.localStorage.setItem(STORAGE_KEY, "true");
+          setSignedIn(true);
+          setError("");
+        })
+        .catch(() => {
+          setError("Invalid username or password.");
+        });
       return;
     }
 
@@ -33,11 +46,13 @@ export function AuthGate() {
   };
 
   const handleLogout = () => {
-    window.localStorage.removeItem(STORAGE_KEY);
-    setSignedIn(false);
-    setUsername("");
-    setPassword("");
-    setError("");
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      window.localStorage.removeItem(STORAGE_KEY);
+      setSignedIn(false);
+      setUsername("");
+      setPassword("");
+      setError("");
+    });
   };
 
   if (!initialized) {
@@ -135,8 +150,13 @@ export function AuthGate() {
           </button>
         </div>
 
-        <div className="mt-8">
-          <KanbanBoard />
+        <div className="mt-8 flex gap-6">
+          <div className="flex-1">
+            <KanbanBoard />
+          </div>
+          <div className="w-80">
+            <AIChatSidebar />
+          </div>
         </div>
       </main>
     </div>

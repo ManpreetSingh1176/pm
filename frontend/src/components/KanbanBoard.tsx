@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -90,6 +90,19 @@ export const KanbanBoard = () => {
   };
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
+
+  // Listen for AI-driven board updates
+  useEffect(() => {
+    const handler = (e: Event) => {
+      // @ts-ignore
+      const detail = e.detail;
+      if (detail) {
+        setBoard(detail as BoardData);
+      }
+    };
+    window.addEventListener("ai:kanbanUpdate", handler as EventListener);
+    return () => window.removeEventListener("ai:kanbanUpdate", handler as EventListener);
+  }, []);
 
   return (
     <div className="relative overflow-hidden">
