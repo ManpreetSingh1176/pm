@@ -1,3 +1,4 @@
+import httpx
 import json
 from typing import Any
 
@@ -113,7 +114,14 @@ async def update_kanban(
 async def ai_ping(test: dict[str, str] = Body({"question": "2+2"})) -> dict[str, str]:
     question = test.get("question", "2+2")
     messages = build_ai_messages(question, {"columns": [], "cards": {}}, [])
-    response_json = await call_openrouter(messages)
+    try:
+        response_json = await call_openrouter(messages)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenRouter error {exc.response.status_code}: {exc.response.text}",
+        )
+
     model_response = extract_ai_message(response_json)
     return {"message": "AI ping successful", "modelResponse": model_response}
 
@@ -132,7 +140,14 @@ async def ai_chat(
 
     board_data = json.loads(get_or_create_board_for_user(user_id))
     messages = build_ai_messages(payload.question, board_data, payload.history)
-    response_json = await call_openrouter(messages)
+    try:
+        response_json = await call_openrouter(messages)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenRouter error {exc.response.status_code}: {exc.response.text}",
+        )
+
     raw_ai_text = extract_ai_message(response_json)
 
     structured_result = parse_structured_ai_response(raw_ai_text)

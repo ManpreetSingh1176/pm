@@ -32,8 +32,21 @@ export function AIChatSidebar() {
         return;
       }
 
-      const data = await res.json();
-      const reply = data.userMessage || data.message || "(no reply)";
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const errorText = data?.detail || data?.message || `AI request failed (${res.status})`;
+        setNotification(errorText);
+        setBusy(false);
+        return;
+      }
+
+      const reply = data?.userMessage || data?.message || data?.detail;
+      if (!reply) {
+        setNotification("AI returned no reply.");
+        setBusy(false);
+        return;
+      }
+
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
 
       if (data.kanbanUpdate) {

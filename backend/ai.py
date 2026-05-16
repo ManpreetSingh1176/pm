@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OPENROUTER_API_URL = "https://openrouter.ai/v1/chat/completions"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_NAME = "openai/gpt-oss-120b"
 
 
@@ -39,8 +39,14 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
-def get_openrouter_api_key() -> str:
-    return os.getenv("OPENROUTER_API_KEY")
+def get_openrouter_api_key() -> str | None:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return None
+    cleaned = api_key.strip()
+    if cleaned == "" or cleaned == "your_openrouter_api_key_here":
+        return None
+    return cleaned
 
 
 def ai_system_instructions() -> str:
@@ -85,13 +91,18 @@ async def call_openrouter(messages: list[dict[str, str]]) -> dict[str, Any]:
     api_key = get_openrouter_api_key()
     # If no API key is configured, return a mocked structured response for local testing
     if not api_key:
-        # Look for a user message to echo; fall back to a default reply
+        # No API key is configured, so return a mocked response for local testing.
         last = messages[-1]["content"] if messages else ""
-        reply = "Mock AI reply"
         if isinstance(last, str) and "update" in last.lower():
-            reply = json.dumps({"userMessage": "Mock: applied update", "kanbanUpdate": None})
+            reply = json.dumps({
+                "userMessage": "Mock: applied update (OPENROUTER_API_KEY not configured)",
+                "kanbanUpdate": None,
+            })
         else:
-            reply = json.dumps({"userMessage": "Mock reply", "kanbanUpdate": None})
+            reply = json.dumps({
+                "userMessage": "Mock reply (OPENROUTER_API_KEY not configured)",
+                "kanbanUpdate": None,
+            })
         return {"choices": [{"message": {"content": reply}}]}
 
     payload = {
